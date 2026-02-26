@@ -1,0 +1,26 @@
+services:
+  api:
+    # Build the image from our Dockerfile in the current directory
+    build: .
+
+    # Map port 8000 on your machine to port 8000 in the container
+    # Format: "host_port:container_port"
+    ports:
+      - "8000:8000"
+
+    # Mount credential files from your machine into the container at runtime.
+    volumes:
+      - ./oauth_credentials.json:/app/oauth_credentials.json:ro
+      - ./token.json:/app/token.json
+
+    # Load environment variables from your .env file
+    env_file:
+      - .env
+
+    # PYTHONUNBUFFERED=1 forces Python to flush print() logs immediately
+    # Batch upload progress shows in real time in docker-compose logs.
+    environment:
+      - PYTHONUNBUFFERED=1
+
+    # Restart the container automatically if it crashes
+    restart: unless-stopped

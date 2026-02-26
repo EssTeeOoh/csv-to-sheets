@@ -1,0 +1,24 @@
+# Never include credentials or tokens in the Docker image 
+# these are secrets that should be injected at runtime via environment variables or volume mounts.
+credentials.json
+oauth_credentials.json
+token.json
+.env
+
+# Python cache files, not needed in the container
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environment, the container installs its own dependencies
+venv/
+.venv/
+
+# Development files not needed in production
+debug_google.py
+*.log
+
+# Git files
+.git/
+.gitignore

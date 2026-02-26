@@ -1,0 +1,9 @@
+credentials.json
+.env
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+token.json
+oauth_credentials.json
+debug_google.py
