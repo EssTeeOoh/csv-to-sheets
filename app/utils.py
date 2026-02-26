@@ -47,7 +47,7 @@ def validate_csv(rows: list[list]) -> tuple[bool, str]:
     num_columns = len(header)
     for i, row in enumerate(rows[1:], start=2):
         if len(row) != num_columns:
-            # We don't hard-fail here — Google Sheets handles ragged rows fine.
+            # We don't hard-fail here, Google Sheets handles ragged rows fine.
             # But we log it as a warning. For now we just pass.
             pass
 
