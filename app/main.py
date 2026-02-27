@@ -1,7 +1,9 @@
 import os
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
+from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
+
 from app.sheets import get_google_services, create_spreadsheet, make_sheet_public, upload_data_to_sheet
 from app.utils import parse_csv, validate_csv
 
@@ -13,8 +15,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Max file size: 500MB 
-MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB in bytes
+# Point FastAPI to the templates folder
+templates = Jinja2Templates(directory="app/templates")
+
+# Max file size: 500MB
+MAX_FILE_SIZE = 500 * 1024 * 1024
 
 # Google Sheets hard cell limit
 CELL_LIMIT = 10_000_000
@@ -23,13 +28,19 @@ CELL_LIMIT = 10_000_000
 def background_upload(spreadsheet_id: str, data: list[list]):
     """
     Runs after we've returned the URL to the client.
-    Uploads all CSV data to the sheet in the background. 
+    Uploads all CSV data to the sheet in the background.
     """
     try:
         sheets_service, _ = get_google_services()
         upload_data_to_sheet(sheets_service, spreadsheet_id, data)
     except Exception as e:
         print(f"Background upload failed for sheet {spreadsheet_id}: {e}")
+
+
+@app.get("/")
+def root(request: Request):
+    """Serves the HTML upload UI from app/templates/index.html"""
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/upload")
@@ -48,19 +59,17 @@ async def upload_csv(
     4. Create sheet with exact dimensions (no resizing needed later)
     5. Make sheet public
     6. Return URL immediately
-    7. Upload data in background
+    7. Upload data in background 
     """
 
-    # 1. Validate file type
+    # 1. Validate file type 
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only .csv files are accepted.")
 
-    # 2. Read file in chunks to avoid memory spike on large files
-    # Reading 1MB at a time lets us reject oversized files early
-    # without loading the entire file into memory first.
+    # 2. Read file in chunks to avoid memory spike on large files 
     chunks = []
     total_size = 0
-    CHUNK_SIZE = 1024 * 1024  
+    CHUNK_SIZE = 1024 * 1024 
 
     while True:
         chunk = await file.read(CHUNK_SIZE)
@@ -103,9 +112,7 @@ async def upload_csv(
             )
         )
 
-    # 5. Create the Google Sheet with exact dimensions 
-    # Passing exact row/col count at creation time avoids needing to
-    # resize after the fact, which is cleaner and safer for concurrent uploads.
+    # 5. Create Google Sheet with exact dimensions 
     try:
         sheets_service, drive_service = get_google_services()
         sheet_title = file.filename.replace(".csv", "").strip() or "Uploaded CSV"
@@ -125,11 +132,9 @@ async def upload_csv(
         )
 
     # 6. Return URL immediately 
-    # We have the sheet ID so we can build the URL before uploading data. 
-    # This way the client can start using the sheet right away, even if the data isn't fully uploaded yet. 
     sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
 
-    # 7. Upload data in background 
+    # 7. Upload data in background
     background_tasks.add_task(background_upload, spreadsheet_id, rows)
 
     return JSONResponse(
@@ -137,14 +142,8 @@ async def upload_csv(
         content={
             "message": "Sheet created successfully. Data is being uploaded in the background.",
             "spreadsheet_url": sheet_url,
-            "rows_queued": total_rows - 1, 
+            "rows_queued": total_rows - 1,
             "columns": total_cols,
             "filename": file.filename
         }
     )
-
-
-@app.get("/")
-def root():
-    """Health check endpoint, confirms the server is running."""
-    return {"status": "ok", "message": "CSV to Sheets API is running."}

@@ -29,7 +29,7 @@ def get_google_services():
     HOSTED (Railway/any server):
       Reads TOKEN_JSON_B64 and OAUTH_CREDENTIALS_B64 environment variables.
       These are base64-encoded versions of the same JSON files.
-      No browser needed — token was generated locally and uploaded as env var.
+      No browser needed, token was generated locally and uploaded as env var.
     """
     creds = None
 
