@@ -10,7 +10,6 @@ A REST API that accepts a CSV file, creates a publicly accessible Google Spreads
 
 **API Docs (Swagger):** https://csv-to-sheets.onrender.com/docs
 
-
 ---
 
 ## How It Works
@@ -47,8 +46,8 @@ Content-Type: multipart/form-data
 ### Request
 
 | Field | Type | Required | Description |
-
-| `file` | `.csv` file | Yes | The CSV file to upload |
+|-------|------|----------|-------------|
+| `file` | `.csv` file | Yes | The CSV file to upload (max 200MB) |
 
 ### Response `202 Accepted`
 
@@ -58,17 +57,18 @@ Content-Type: multipart/form-data
   "spreadsheet_url": "https://docs.google.com/spreadsheets/d/SHEET_ID/edit",
   "rows_queued": 999,
   "columns": 9,
+  "total_cells": 8991,
   "filename": "data.csv"
 }
 ```
 
 ### Error Responses
 
-| Status | Reason 
-
-| `400` | File is not a CSV, is empty, or exceeds 500MB 
-| `422` | CSV has no data rows, or exceeds Google's 10M cell limit 
-| `500` | Failed to create Google Sheet (auth or API issue) 
+| Status | Reason |
+|--------|--------|
+| `400` | File is not a CSV, is empty, or exceeds 200MB |
+| `422` | CSV has no data rows, or exceeds Google's 10M cell limit |
+| `500` | Failed to create Google Sheet (auth or API issue) |
 
 ---
 
@@ -202,21 +202,11 @@ The API will be available at `http://localhost:8000`.
 
 ## Handling Large Files
 
-### Current approach (up to ~1M rows depending on column count)
-
-- Files are read in **1MB chunks** to avoid memory spikes
+- Files are read in **1MB chunks**, size limit is enforced before each chunk is stored, so RAM never exceeds the 200MB limit even if a larger file is uploaded
 - Data is uploaded to Google Sheets in **batches of 10,000 rows**
 - Each batch has **automatic retry with exponential backoff** (up to 3 attempts)
-- The sheet is created with **exact dimensions** at creation time, no resizing needed
+- The sheet is created with **exact dimensions** at creation time — no resizing needed
 - Google's hard limit of **10 million cells** is checked before any API call
-
-### Batch size tradeoffs
-
-| Batch size | API calls (100k rows) | Speed | Timeout risk 
-
-| 1,000      | 100                  | Slow   | Very low 
-| 10,000     | 10                   | Fast   | Low 
-| 100,000    | 1                    | Fastest | High 
 
 
 
@@ -226,12 +216,27 @@ For production-scale workloads, the recommended approach would be:
 
 1. **Job queue** (e.g. Celery + Redis) — accept the upload, immediately queue a background job, return the URL. Workers process uploads independently from the web server.
 
+2. **Streaming CSV parsing** — read and upload line by line instead of loading the entire file into memory. RAM usage stays constant at O(batch_size) regardless of file size.
 
-2. **Multiple sheets** — for files exceeding 10M cells, automatically split data across multiple sheets (Sheet1, Sheet2, etc.) within the same spreadsheet.
+3. **Multiple sheets** — for files exceeding 10M cells, automatically split data across multiple sheets (Sheet1, Sheet2, etc.) within the same spreadsheet.
 
-3. **Status endpoint** — add a `GET /status/{job_id}` endpoint so clients can poll upload progress rather than relying on background task logs.
+4. **Status endpoint** — add a `GET /status/{job_id}` endpoint so clients can poll upload progress rather than relying on background task logs.
 
+```
+Current architecture:             Production architecture:
 
+POST /upload                       POST /upload
+    ↓                                  ↓
+Parse CSV into RAM                 Save file to S3
+    ↓                                  ↓
+Create sheet                       Queue job (Celery)
+    ↓                                  ↓
+Return URL                         Return URL + job_id
+    ↓                                  ↓
+Background upload                  Worker streams CSV → Sheets
+                                       ↓
+                                   Update job status
+```
 
 ---
 
@@ -246,7 +251,7 @@ csv-to-sheets/
 │   ├── utils.py         # CSV parsing and validation
 │   └── templates/
 │       └── index.html   # Web UI
-├── .env                 # Local environment variables 
+├── .env                 # Local environment variables (never committed)
 ├── .gitignore
 ├── .dockerignore
 ├── docker-compose.yml
@@ -259,20 +264,24 @@ csv-to-sheets/
 
 ## Environment Variables
 
-| `OAUTH_CREDENTIALS_PATH` | Path to OAuth client credentials JSON | Yes (local) 
-| `TOKEN_PATH` | Path to saved OAuth token | Yes (local) 
-| `TOKEN_JSON_B64` | Base64-encoded token.json contents | Yes (hosted) 
-| `PYTHONUNBUFFERED` | Set to `1` for real-time logs in Docker | Optional 
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OAUTH_CREDENTIALS_PATH` | Path to OAuth client credentials JSON | Yes (local) |
+| `TOKEN_PATH` | Path to saved OAuth token | Yes (local) |
+| `TOKEN_JSON_B64` | Base64-encoded token.json contents | Yes (hosted) |
+| `PYTHONUNBUFFERED` | Set to `1` for real-time logs in Docker | Optional |
 
 ---
 
 ## Tech Stack
 
- **FastAPI** | Web framework and API 
- **Uvicorn** | ASGI server 
- **Google Sheets API v4** | Read/write spreadsheet data 
- **Google Drive API v3** | Create files, set permissions 
- **google-auth-oauthlib** | OAuth2 authentication flow 
- **Jinja2** | HTML template rendering 
- **Docker** | Containerization 
- **Render** | Free cloud hosting 
+| Tool | Purpose |
+|------|---------|
+| **FastAPI** | Web framework and API |
+| **Uvicorn** | ASGI server |
+| **Google Sheets API v4** | Read/write spreadsheet data |
+| **Google Drive API v3** | Create files, set permissions |
+| **google-auth-oauthlib** | OAuth2 authentication flow |
+| **Jinja2** | HTML template rendering |
+| **Docker** | Containerization |
+| **Render** | Free cloud hosting |
