@@ -67,8 +67,54 @@
             50%, 100% { opacity: 0; }
         }
 
-        h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 6px; }
         p.subtitle { color: #666; font-size: 14px; margin-bottom: 28px; }
+
+        .auth-status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin: -10px 0 20px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #dbe3ee;
+            background: #f8fafc;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .auth-status.visible { display: flex; }
+
+        .auth-status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            flex: 0 0 auto;
+            background: #94a3b8;
+        }
+
+        .auth-status.healthy {
+            background: #effaf3;
+            border-color: #b7e4c7;
+            color: #166534;
+        }
+
+        .auth-status.healthy .auth-status-dot { background: #16a34a; }
+
+        .auth-status.warning {
+            background: #fff8e1;
+            border-color: #f9c74f;
+            color: #854d0e;
+        }
+
+        .auth-status.warning .auth-status-dot { background: #d97706; }
+
+        .auth-status.error {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #b91c1c;
+        }
+
+        .auth-status.error .auth-status-dot { background: #dc2626; }
 
         .upload-area {
             border: 2px dashed #d0d7de;
@@ -82,7 +128,15 @@
 
         .upload-area:hover { border-color: #4f8ef7; }
         .upload-area.dragover { border-color: #4f8ef7; background: #f0f7ff; }
-        .upload-icon { font-size: 36px; margin-bottom: 10px; }
+
+        .upload-icon {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0;
+            margin-bottom: 10px;
+            color: #4f8ef7;
+        }
+
         .upload-area p { color: #666; font-size: 14px; }
         .upload-area span { color: #4f8ef7; font-weight: 500; }
 
@@ -149,6 +203,7 @@
             margin-top: 12px;
             font-size: 12px;
             color: #888;
+            flex-wrap: wrap;
         }
 
         .info-row span { display: flex; align-items: center; gap: 4px; }
@@ -190,7 +245,7 @@
         }
 
         .progress-bar-fill.complete { background: #34a853; }
-        .progress-bar-fill.failed   { background: #dc2626; }
+        .progress-bar-fill.failed { background: #dc2626; }
 
         .progress-detail { margin-top: 6px; font-size: 12px; color: #888; }
 
@@ -204,10 +259,9 @@
         }
 
         .status-badge.uploading { background: #e8f0fe; color: #4f8ef7; }
-        .status-badge.complete  { background: #e6f4ea; color: #34a853; }
-        .status-badge.failed    { background: #fef0f0; color: #dc2626; }
+        .status-badge.complete { background: #e6f4ea; color: #34a853; }
+        .status-badge.failed { background: #fef0f0; color: #dc2626; }
 
-        /* Banner shown when a previous in-progress job is found in localStorage */
         #resume-banner {
             display: none;
             margin-bottom: 20px;
@@ -247,6 +301,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .note { margin-top: 16px; font-size: 12px; color: #888; text-align: center; }
+
         .page-links {
             margin-top: 16px;
             display: flex;
@@ -278,24 +333,22 @@
             ></div>
         </div>
         <p class="subtitle">Upload a CSV file and get a public Google Sheets link instantly.</p>
+        <div id="auth-status" class="auth-status" role="status" aria-live="polite">
+            <span class="auth-status-dot" aria-hidden="true"></span>
+            <span id="auth-status-text">Checking Google auth status...</span>
+        </div>
 
-        <!--
-            RESUME BANNER
-            Shown on page load if localStorage contains a previous job
-            that hasn't reached "complete" or "failed" yet.
-            Lets users recover progress after closing/refreshing the tab.
-        -->
         <div id="resume-banner">
-            📤 You have an upload in progress from a previous session.
+            You have an upload in progress from a previous session.
             <a onclick="resumePreviousJob()">Track its progress</a> or
             <a onclick="clearSavedJob()">dismiss</a>.
         </div>
 
         <form id="upload-form">
             <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
-                <div class="upload-icon">📁</div>
+                <div class="upload-icon">CSV</div>
                 <p><span>Click to upload</span> or drag and drop</p>
-                <p>CSV files only · Max 200MB</p>
+                <p>CSV files only - Max 200MB</p>
                 <div id="file-name"></div>
             </div>
 
@@ -307,15 +360,15 @@
         </form>
 
         <div id="result">
-            <p class="result-label">✅ Sheet created! Your data is being uploaded.</p>
+            <p class="result-label">Sheet created. Your data is being uploaded.</p>
             <div class="url-box">
-                <a id="sheet-url" href="#" target="_blank">—</a>
+                <a id="sheet-url" href="#" target="_blank">-</a>
                 <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copy</button>
             </div>
             <div class="info-row">
-                <span>📄 <span id="info-filename">—</span></span>
-                <span>🔢 <span id="info-rows">—</span> rows</span>
-                <span>📋 <span id="info-cols">—</span> columns</span>
+                <span>File: <span id="info-filename">-</span></span>
+                <span>Rows: <span id="info-rows">-</span></span>
+                <span>Columns: <span id="info-cols">-</span></span>
             </div>
 
             <div id="progress-section">
@@ -367,68 +420,58 @@
 
         typingTargets.forEach((element) => animateTyping(element));
 
-        // ------------------------------------------------------------------
-        // DOM REFERENCES
-        // ------------------------------------------------------------------
-        const fileInput  = document.getElementById('file-input');
-        const submitBtn  = document.getElementById('submit-btn');
-        const dropZone   = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const dropZone = document.getElementById('drop-zone');
         const fileNameEl = document.getElementById('file-name');
-
-        // ------------------------------------------------------------------
-        // POLLING STATE
-        //
-        // pollingInterval: holds the setInterval handle so we can stop it.
-        //
-        // pollCount: how many consecutive times we've seen the same status.
-        // Used to slow down polling when nothing is changing (adaptive polling).
-        //
-        // lastStatus: the status string from the previous poll.
-        // Used to detect when status hasn't changed.
-        //
-        // ADAPTIVE POLLING INTERVALS:
-        // Instead of a fixed 3-second interval, we start fast and slow down
-        // as the upload progresses. This gives quick initial feedback without
-        // hammering the server for the entire duration of a long upload.
-        //   - First 3 polls: every 2 seconds  (fast -- show something quickly)
-        //   - Polls 4-10:    every 4 seconds  (normal)
-        //   - Poll 11+:      every 6 seconds  (slow -- long upload, conserve requests)
-        //   - After 10 unchanged responses: every 10 seconds (stuck or very slow)
-        // ------------------------------------------------------------------
-        let pollingInterval  = null;
-        let pollCount        = 0;
-        let unchangedCount   = 0;
-        let lastPercent      = -1;
-
-        // localStorage key for saving job state between page visits
+        const authStatusEl = document.getElementById('auth-status');
+        const authStatusTextEl = document.getElementById('auth-status-text');
+        let pollingInterval = null;
+        let pollCount = 0;
+        let unchangedCount = 0;
+        let lastPercent = -1;
         const STORAGE_KEY = 'csv_upload_job';
 
-        // ------------------------------------------------------------------
-        // PAGE LOAD -- check for a saved in-progress job
-        // ------------------------------------------------------------------
         window.addEventListener('load', () => {
             checkForSavedJob();
+            loadAuthStatus();
         });
 
+        async function loadAuthStatus() {
+            authStatusEl.className = 'auth-status visible';
+            authStatusTextEl.textContent = 'Checking Google auth status...';
+
+            try {
+                const response = await fetch('/auth-status');
+                const status = await response.json();
+
+                if (status.ready) {
+                    authStatusEl.className = 'auth-status visible healthy';
+                    authStatusTextEl.textContent = status.expiry
+                        ? `Google auth healthy. Access token refreshes automatically. Current token expires at ${status.expiry}.`
+                        : 'Google auth healthy. Access token refreshes automatically.';
+                    return;
+                }
+
+                if (status.reauth_required) {
+                    authStatusEl.className = 'auth-status visible warning';
+                    authStatusTextEl.textContent =
+                        'Google auth needs reauthorization. Delete token.json, restart the app, and complete the browser sign-in flow.';
+                    return;
+                }
+
+                authStatusEl.className = 'auth-status visible error';
+                authStatusTextEl.textContent = status.last_error
+                    ? `Google auth is unavailable: ${status.last_error}`
+                    : 'Google auth is unavailable right now.';
+            } catch (error) {
+                authStatusEl.className = 'auth-status visible error';
+                authStatusTextEl.textContent =
+                    'Could not check Google auth status. Open /auth-status directly for details.';
+            }
+        }
+
         function checkForSavedJob() {
-            /*
-                On page load, look in localStorage for a saved job.
-                If found and not yet terminal, show the resume banner.
-
-                WHY localStorage:
-                When the user closes the tab or refreshes, all JavaScript
-                state is lost. The pollingInterval, job_id, and sheet URL
-                all disappear. Without saving them somewhere persistent,
-                the user loses all progress tracking.
-
-                localStorage persists until explicitly cleared. We save
-                the job_id, spreadsheet_url, and total_rows when the upload
-                starts. On next page load we can resume tracking.
-
-                We only show the banner if the saved status is not yet
-                terminal (not "complete" or "failed") -- no point resuming
-                a job that's already done.
-            */
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (!saved) return;
@@ -436,66 +479,44 @@
                 const job = JSON.parse(saved);
                 if (!job.job_id) return;
 
-                // Don't show banner for already-finished jobs
                 if (job.status === 'complete' || job.status === 'failed') {
                     localStorage.removeItem(STORAGE_KEY);
                     return;
                 }
 
-                // Show the resume banner
                 document.getElementById('resume-banner').style.display = 'block';
-
             } catch (e) {
-                // Corrupted localStorage entry -- just clear it
                 localStorage.removeItem(STORAGE_KEY);
             }
         }
 
         function resumePreviousJob() {
-            /*
-                Called when user clicks "Track its progress" in the resume banner.
-                Restores the result section with saved data and resumes polling.
-            */
             try {
                 const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
                 if (!saved || !saved.job_id) return;
 
-                // Restore the result section
                 const urlEl = document.getElementById('sheet-url');
                 urlEl.href = saved.spreadsheet_url;
                 urlEl.textContent = saved.spreadsheet_url;
 
-                document.getElementById('info-filename').textContent = saved.filename || '—';
+                document.getElementById('info-filename').textContent = saved.filename || '-';
                 document.getElementById('info-rows').textContent = (saved.total_rows || 0).toLocaleString();
-                document.getElementById('info-cols').textContent = saved.columns || '—';
+                document.getElementById('info-cols').textContent = saved.columns || '-';
                 document.getElementById('result').style.display = 'block';
                 document.getElementById('resume-banner').style.display = 'none';
 
-                // Resume polling
                 startPolling(saved.job_id, saved.total_rows || 0);
-
             } catch (e) {
                 clearSavedJob();
             }
         }
 
         function clearSavedJob() {
-            /*
-                Removes the saved job from localStorage and hides the banner.
-                Called when user clicks "dismiss" or when polling ends.
-            */
             localStorage.removeItem(STORAGE_KEY);
             document.getElementById('resume-banner').style.display = 'none';
         }
 
         function saveJobToStorage(jobId, spreadsheetUrl, filename, totalRows, columns) {
-            /*
-                Saves job info to localStorage so it can be recovered
-                if the user closes the tab before the upload finishes.
-
-                We save enough to restore the UI:
-                    job_id, spreadsheet_url, filename, total_rows, columns, status
-            */
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
                     job_id: jobId,
@@ -507,17 +528,11 @@
                     saved_at: new Date().toISOString()
                 }));
             } catch (e) {
-                // localStorage might be full or disabled -- not critical
                 console.warn('Could not save job to localStorage:', e);
             }
         }
 
         function updateStoredJobStatus(status) {
-            /*
-                Updates just the status field in the saved localStorage entry.
-                When status becomes "complete" or "failed" we'll clear it on
-                next page load via checkForSavedJob.
-            */
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (!saved) return;
@@ -529,9 +544,6 @@
             }
         }
 
-        // ------------------------------------------------------------------
-        // FILE SELECTION
-        // ------------------------------------------------------------------
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 fileNameEl.textContent = fileInput.files[0].name;
@@ -539,9 +551,6 @@
             }
         });
 
-        // ------------------------------------------------------------------
-        // DRAG AND DROP
-        // ------------------------------------------------------------------
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
@@ -562,9 +571,6 @@
             }
         });
 
-        // ------------------------------------------------------------------
-        // FORM SUBMISSION
-        // ------------------------------------------------------------------
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -573,7 +579,6 @@
             document.getElementById('progress-section').style.display = 'none';
             document.getElementById('resume-banner').style.display = 'none';
 
-            // Stop any running poll from a previous upload
             stopPolling();
 
             submitBtn.disabled = true;
@@ -591,7 +596,6 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Populate the result section
                     const urlEl = document.getElementById('sheet-url');
                     urlEl.href = data.spreadsheet_url;
                     urlEl.textContent = data.spreadsheet_url;
@@ -602,8 +606,6 @@
                     document.getElementById('result').style.display = 'block';
 
                     if (data.job_id) {
-                        // Save to localStorage so user can recover if they
-                        // close the tab before the upload finishes
                         saveJobToStorage(
                             data.job_id,
                             data.spreadsheet_url,
@@ -614,73 +616,35 @@
 
                         startPolling(data.job_id, data.rows_queued);
                     }
-
                 } else {
                     showError(data.detail || 'Something went wrong.');
                 }
-
             } catch (err) {
-                showError('Network error — please try again.');
+                showError('Network error - please try again.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Upload CSV';
             }
         });
 
-        // ------------------------------------------------------------------
-        // startPolling(jobId, totalRows)
-        //
-        // Resets polling state and begins the adaptive polling loop.
-        //
-        // ADAPTIVE POLLING:
-        // We use a self-scheduling approach with setTimeout instead of
-        // a fixed setInterval. After each poll completes, we schedule
-        // the next one with a delay based on:
-        //   - How many polls have happened (start fast, slow down)
-        //   - Whether the progress changed (no change = slow down faster)
-        //
-        // This replaces the fixed 3-second interval with a smarter system
-        // that's responsive at the start and gentle on the server over time.
-        // ------------------------------------------------------------------
         function startPolling(jobId, totalRows) {
-            // Reset all polling state for this new job
-            pollCount      = 0;
+            pollCount = 0;
             unchangedCount = 0;
-            lastPercent    = -1;
+            lastPercent = -1;
 
             document.getElementById('progress-section').style.display = 'block';
             updateProgressBar(0, 0, totalRows, 'pending');
-
-            // Poll once immediately, then schedule subsequent polls
             doPoll(jobId, totalRows);
         }
 
         function getNextInterval() {
-            /*
-                Returns the milliseconds to wait before the next poll.
-
-                First 3 polls: 2 seconds  -- fast initial feedback
-                Polls 4-10:    4 seconds  -- normal
-                Poll 11+:      6 seconds  -- long upload, reduce server load
-
-                If 10+ consecutive polls showed no progress change:
-                10 seconds     -- upload may be stuck or nearly done, back off
-            */
             if (unchangedCount >= 10) return 10000;
-            if (pollCount < 3)  return 2000;
+            if (pollCount < 3) return 2000;
             if (pollCount < 10) return 4000;
             return 6000;
         }
 
         function doPoll(jobId, totalRows) {
-            /*
-                Performs one status poll then schedules the next one.
-
-                Using setTimeout (scheduled after each response) instead of
-                setInterval (fixed clock ticks) means we don't pile up requests
-                if the server is slow -- we always wait for the response before
-                scheduling the next poll.
-            */
             pollStatus(jobId, totalRows).then((shouldContinue) => {
                 if (shouldContinue) {
                     const delay = getNextInterval();
@@ -696,12 +660,6 @@
             }
         }
 
-        // ------------------------------------------------------------------
-        // pollStatus(jobId, totalRows)
-        //
-        // Fetches /status/{jobId} and updates the UI.
-        // Returns true if polling should continue, false if done.
-        // ------------------------------------------------------------------
         async function pollStatus(jobId, totalRows) {
             pollCount++;
 
@@ -709,11 +667,10 @@
                 const response = await fetch(`/status/${jobId}`);
 
                 if (response.status === 404) {
-                    // Job not found -- server restarted or file expired
                     stopPolling();
                     updateProgressBar(0, 0, totalRows, 'failed');
                     setProgressDetail(
-                        'Status unavailable — the server may have restarted. ' +
+                        'Status unavailable - the server may have restarted. ' +
                         'Check your sheet directly to see if data arrived.'
                     );
                     clearSavedJob();
@@ -722,14 +679,10 @@
 
                 if (!response.ok) {
                     console.warn(`Status poll returned ${response.status}`);
-                    return true; // Try again next interval
+                    return true;
                 }
 
                 const job = await response.json();
-
-                // Track whether progress is actually changing.
-                // If percent hasn't moved, increment unchangedCount.
-                // getNextInterval() uses this to slow down polling.
                 const currentPercent = job.percent_complete || 0;
                 if (currentPercent === lastPercent) {
                     unchangedCount++;
@@ -748,39 +701,31 @@
                 if (job.status === 'complete') {
                     stopPolling();
                     updateStoredJobStatus('complete');
-                    clearSavedJob(); // Clean up localStorage on success
+                    clearSavedJob();
                     return false;
                 }
 
                 if (job.status === 'failed') {
                     stopPolling();
                     updateStoredJobStatus('failed');
-
-                    // Show the specific error from the server.
-                    // Now includes "failed after X of Y rows" if partial upload.
                     if (job.error) {
-                        setProgressDetail(`⚠️ ${job.error}`);
+                        setProgressDetail(`Warning: ${job.error}`);
                     }
                     clearSavedJob();
                     return false;
                 }
 
-                return true; // Continue polling
-
+                return true;
             } catch (err) {
-                // Network error during poll -- log and retry next interval
                 console.warn('Status poll failed:', err);
                 return true;
             }
         }
 
-        // ------------------------------------------------------------------
-        // updateProgressBar(percent, rowsUploaded, totalRows, status)
-        // ------------------------------------------------------------------
         function updateProgressBar(percent, rowsUploaded, totalRows, status) {
-            const bar       = document.getElementById('progress-bar');
+            const bar = document.getElementById('progress-bar');
             const percentEl = document.getElementById('progress-percent');
-            const badge     = document.getElementById('status-badge');
+            const badge = document.getElementById('status-badge');
             const labelText = document.getElementById('progress-label-text');
 
             const clamped = Math.min(100, Math.max(0, percent));
@@ -800,7 +745,6 @@
                 badge.className = 'status-badge failed';
                 badge.textContent = 'failed';
                 labelText.textContent = 'Upload failed';
-                // Detail text set by the caller with the specific error message
             } else {
                 bar.className = 'progress-bar-fill';
                 badge.className = 'status-badge uploading';
@@ -824,7 +768,7 @@
 
         function showError(message) {
             const errEl = document.getElementById('error');
-            errEl.textContent = '❌ ' + message;
+            errEl.textContent = 'Error: ' + message;
             errEl.style.display = 'block';
         }
 

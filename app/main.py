@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from app.sheets import (
     initialise_google_services,
     get_cached_services,
+    get_google_auth_status,
     create_spreadsheet,
     make_sheet_public,
     upload_data_to_sheet
@@ -51,6 +52,7 @@ MAX_FILE_SIZE_MB = 200
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 CELL_LIMIT = 10_000_000
 CHUNK_SIZE = 1024 * 1024
+TEMP_CSV_PREFIX = "csv_to_sheets_"
 
 VALID_CSV_CONTENT_TYPES = {
     "text/csv",
@@ -226,7 +228,9 @@ async def startup_event():
 
     # 2. Clean up orphaned CSV temp files from crashed uploads
     temp_dir = tempfile.gettempdir()
-    leftover_files = glob.glob(os.path.join(temp_dir, "tmp*.csv"))
+    leftover_files = glob.glob(
+        os.path.join(temp_dir, f"{TEMP_CSV_PREFIX}*.csv")
+    )
     if leftover_files:
         logger.warning(
             f"Found {len(leftover_files)} orphaned CSV temp file(s). Cleaning up..."
@@ -405,6 +409,14 @@ def health_check():
     return {"status": "ok"}
 
 
+@app.get("/auth-status")
+def auth_status():
+    """Reports whether Google auth is ready and whether local reauth is needed."""
+    status = get_google_auth_status()
+    http_status = 200 if status.get("ready") else 503
+    return JSONResponse(status_code=http_status, content=status)
+
+
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
     """
@@ -483,7 +495,7 @@ async def upload_csv(
 
         try:
             with tempfile.NamedTemporaryFile(
-                delete=False, suffix=".csv", mode="wb"
+                delete=False, prefix=TEMP_CSV_PREFIX, suffix=".csv", mode="wb"
             ) as tmp:
                 temp_file_path = tmp.name
                 logger.info(f"Job {job_id}: writing to {temp_file_path}")
@@ -543,7 +555,7 @@ async def upload_csv(
             update_job(job_id, status="failed", error=error)
             raise HTTPException(status_code=422, detail=error)
 
-        update_job(job_id, total_rows=total_rows - 1)
+        update_job(job_id, total_rows=total_rows)
 
         # Step 5: check cell limit
         total_cells = total_rows * total_cols
@@ -594,8 +606,6 @@ async def upload_csv(
             total_rows
         )
 
-        data_rows = total_rows - 1
-
         return JSONResponse(
             status_code=202,
             content={
@@ -603,7 +613,7 @@ async def upload_csv(
                 "spreadsheet_url": sheet_url,
                 "job_id": job_id,
                 "status_url": f"/status/{job_id}",
-                "rows_queued": data_rows,
+                "rows_queued": total_rows,
                 "columns": total_cols,
                 "total_cells": total_cells,
                 "filename": filename or "unknown"

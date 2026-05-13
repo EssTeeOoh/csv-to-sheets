@@ -19,6 +19,29 @@ SCOPES = [
 
 _sheets_service = None
 _drive_service = None
+_cached_creds = None
+_auth_state = {
+    "mode": "unknown",
+    "ready": False,
+    "expiry": None,
+    "expired": None,
+    "has_refresh_token": False,
+    "reauth_required": False,
+    "token_source": None,
+    "last_error": None,
+}
+
+
+def _set_auth_state(**kwargs):
+    """Updates the cached auth status exposed by the health endpoint."""
+    _auth_state.update(kwargs)
+
+
+def _serialise_expiry(creds: Optional[Credentials]) -> Optional[str]:
+    """Returns the credential expiry as ISO text for logs and JSON responses."""
+    if creds is None or creds.expiry is None:
+        return None
+    return creds.expiry.isoformat()
 
 
 def _run_local_oauth_flow() -> Credentials:
@@ -46,12 +69,22 @@ def initialise_google_services():
     LOCAL mode: reads token.json, opens browser on first run.
     HOSTED mode: reads TOKEN_JSON_B64 env var (base64-encoded token.json).
     """
-    global _sheets_service, _drive_service
+    global _sheets_service, _drive_service, _cached_creds
 
     creds = None
     token_json_b64 = os.getenv("TOKEN_JSON_B64")
+    _set_auth_state(
+        ready=False,
+        expiry=None,
+        expired=None,
+        has_refresh_token=False,
+        reauth_required=False,
+        token_source=None,
+        last_error=None,
+    )
 
     if token_json_b64:
+        _set_auth_state(mode="hosted", token_source="TOKEN_JSON_B64")
         logger.info("Auth mode: hosted (TOKEN_JSON_B64 environment variable)")
         try:
             token_data = base64.b64decode(token_json_b64).decode()
@@ -60,6 +93,11 @@ def initialise_google_services():
             )
             logger.info(f"Hosted credentials loaded. Token expiry: {creds.expiry}")
         except Exception as e:
+            _set_auth_state(
+                ready=False,
+                reauth_required=True,
+                last_error=f"Failed to decode TOKEN_JSON_B64: {e}"
+            )
             logger.error(
                 f"Failed to decode TOKEN_JSON_B64: {e}.",
                 exc_info=True
@@ -67,17 +105,37 @@ def initialise_google_services():
             return
     else:
         token_path = os.getenv("TOKEN_PATH", "token.json")
+        _set_auth_state(mode="local", token_source=token_path)
         if os.path.exists(token_path):
             logger.info(f"Local mode: loading credentials from {token_path}")
             creds = Credentials.from_authorized_user_file(token_path, SCOPES)
             logger.info(f"Local credentials loaded. Token expiry: {creds.expiry}")
         else:
+            _set_auth_state(
+                ready=False,
+                reauth_required=True,
+                last_error=f"No token.json found at '{token_path}'."
+            )
             logger.warning(f"No token.json found at '{token_path}'. Will open browser OAuth flow...")
+
+    if creds:
+        _set_auth_state(
+            expiry=_serialise_expiry(creds),
+            expired=creds.expired,
+            has_refresh_token=bool(creds.refresh_token),
+        )
 
     if creds and creds.expired and creds.refresh_token:
         logger.warning(f"Access token expired at {creds.expiry}. Refreshing...")
         try:
             creds.refresh(Request())
+            _set_auth_state(
+                expiry=_serialise_expiry(creds),
+                expired=creds.expired,
+                has_refresh_token=bool(creds.refresh_token),
+                reauth_required=False,
+                last_error=None,
+            )
             logger.info(f"Token refreshed. New expiry: {creds.expiry}")
             if not token_json_b64:
                 token_path = os.getenv("TOKEN_PATH", "token.json")
@@ -85,6 +143,11 @@ def initialise_google_services():
                     f.write(creds.to_json())
                 logger.info(f"Refreshed token saved to {token_path}")
         except Exception as e:
+            _set_auth_state(
+                ready=False,
+                reauth_required=True,
+                last_error=str(e)
+            )
             logger.error(
                 f"Token refresh FAILED: {e}. "
                 f"Fix: run locally, complete OAuth flow, re-encode token.json, "
@@ -105,6 +168,11 @@ def initialise_google_services():
 
     if not creds or not creds.valid:
         if token_json_b64:
+            _set_auth_state(
+                ready=False,
+                reauth_required=True,
+                last_error="Hosted credentials invalid."
+            )
             logger.error(
                 "Hosted credentials invalid. Regenerate token.json locally "
                 "and update TOKEN_JSON_B64."
@@ -116,10 +184,32 @@ def initialise_google_services():
             )
 
         creds = _run_local_oauth_flow()
+        _set_auth_state(
+            expiry=_serialise_expiry(creds),
+            expired=creds.expired,
+            has_refresh_token=bool(creds.refresh_token),
+            reauth_required=False,
+            last_error=None,
+        )
 
+    _cached_creds = creds
     _sheets_service = build("sheets", "v4", credentials=creds)
     _drive_service = build("drive", "v3", credentials=creds)
+    _set_auth_state(
+        ready=True,
+        expiry=_serialise_expiry(creds),
+        expired=creds.expired,
+        has_refresh_token=bool(creds.refresh_token),
+        reauth_required=False,
+        last_error=None,
+    )
     logger.info("Google Sheets and Drive services initialised and cached.")
+    logger.info(
+        "Google auth ready. mode=%s expiry=%s refresh_token=%s",
+        _auth_state["mode"],
+        _auth_state["expiry"],
+        _auth_state["has_refresh_token"]
+    )
 
 
 def get_cached_services():
@@ -130,6 +220,16 @@ def get_cached_services():
             "Check server logs. Fix: regenerate token.json and update TOKEN_JSON_B64."
         )
     return _sheets_service, _drive_service
+
+
+def get_google_auth_status() -> dict:
+    """Returns the current Google auth health information for status checks."""
+    status = dict(_auth_state)
+    status["services_cached"] = (
+        _sheets_service is not None and _drive_service is not None
+    )
+    status["credentials_cached"] = _cached_creds is not None
+    return status
 
 
 def create_spreadsheet(sheets_service, title: str, rows: int = 1000, cols: int = 26) -> str:
