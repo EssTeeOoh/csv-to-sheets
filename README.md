@@ -1,5 +1,7 @@
 # CSV to Google Sheets API
 
+![CSV to Sheets logo](app/static/branding/csv-to-sheets-logo.png)
+
 A REST API that accepts a CSV file, creates a publicly accessible Google Spreadsheet, and returns the sheet URL instantly. Data is uploaded in the background so you get the URL without waiting.
 
 ## Live Demo
@@ -31,6 +33,8 @@ Upload CSV data in background (batches of 10,000 rows)
 ```
 
 The key architectural decision is returning the URL immediately after the sheet is created, then uploading data asynchronously in the background. This keeps response times fast regardless of file size.
+
+The web UI now serves a branded homepage logo and favicon from the app's static assets.
 
 ---
 
@@ -248,6 +252,8 @@ csv-to-sheets/
 │   ├── __init__.py
 │   ├── main.py          # FastAPI app and endpoints
 │   ├── sheets.py        # Google Sheets/Drive integration
+│   ├── static/
+│   │   └── branding/    # Logo and favicon assets
 │   ├── utils.py         # CSV parsing and validation
 │   └── templates/
 │       └── index.html   # Web UI

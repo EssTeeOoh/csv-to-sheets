@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | CSV to Google Sheets</title>
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/branding/favicon.png">
+    <link rel="shortcut icon" href="/static/branding/favicon.png">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 48px 20px 72px;
+        }
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .brand-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: block;
+            flex: 0 0 auto;
+        }
+        .brand-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #111827;
+            min-height: 1.4rem;
+            white-space: nowrap;
+        }
+        .typing-caret::after {
+            content: "";
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            margin-left: 3px;
+            background: #2563eb;
+            vertical-align: -0.12em;
+            animation: blink 0.9s steps(1) infinite;
+        }
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        .panel {
+            background: #ffffff;
+            border: 1px solid #dbe3ee;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+        h1, h2 { color: #111827; margin-top: 0; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.1rem; margin-top: 2rem; }
+        p, li { font-size: 0.98rem; }
+        ul { padding-left: 1.25rem; }
+        .eyebrow {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="panel">
+            <div class="brand-row">
+                <img class="brand-logo" src="/static/branding/favicon.png" alt="CSV to Sheets logo">
+                <div
+                    class="brand-name typing-caret"
+                    data-text="CSV to Google Sheets"
+                    aria-label="CSV to Google Sheets"
+                ></div>
+            </div>
+            <p class="eyebrow">Last updated: May 13, 2026</p>
+            <h1>Terms of Service</h1>
+            <p>
+                By using CSV to Google Sheets, you agree to use the service only for
+                lawful purposes and only with files and Google accounts you are authorized
+                to use.
+            </p>
+
+            <h2>Service description</h2>
+            <p>
+                The service accepts CSV uploads, creates a Google Spreadsheet, and writes
+                the uploaded data into that spreadsheet using the Google account connected
+                through OAuth.
+            </p>
+
+            <h2>User responsibilities</h2>
+            <ul>
+                <li>You are responsible for the files you upload and the permissions you grant.</li>
+                <li>You must not use the service to violate law, privacy, or intellectual property rights.</li>
+                <li>You are responsible for reviewing spreadsheet sharing settings before distributing links.</li>
+            </ul>
+
+            <h2>Availability</h2>
+            <p>
+                The service is provided on an as-is and as-available basis. Availability,
+                performance, and feature behavior may change without notice.
+            </p>
+
+            <h2>Third-party services</h2>
+            <p>
+                The service depends on Google APIs and infrastructure providers. Their
+                availability and policies may affect how the service works.
+            </p>
+
+            <h2>Limitation of liability</h2>
+            <p>
+                To the maximum extent permitted by law, the service is provided without
+                warranties, and the app owner is not liable for indirect, incidental, or
+                consequential damages arising from use of the service.
+            </p>
+
+            <h2>Changes</h2>
+            <p>
+                These terms may be updated from time to time. Continued use of the service
+                after updates means you accept the revised terms.
+            </p>
+        </section>
+    </main>
+    <script>
+        const typingTarget = document.querySelector('[data-text]');
+
+        function animateTyping(element, delay = 45) {
+            const text = element.dataset.text || '';
+            element.textContent = '';
+            let index = 0;
+
+            const typeNext = () => {
+                if (index < text.length) {
+                    element.textContent += text[index];
+                    index += 1;
+                    setTimeout(typeNext, delay);
+                } else {
+                    element.classList.remove('typing-caret');
+                }
+            };
+
+            typeNext();
+        }
+
+        if (typingTarget) {
+            animateTyping(typingTarget);
+        }
+    </script>
+</body>
+</html>

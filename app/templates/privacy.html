@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | CSV to Google Sheets</title>
+    <link rel="icon" type="image/png" sizes="256x256" href="/static/branding/favicon.png">
+    <link rel="shortcut icon" href="/static/branding/favicon.png">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 48px 20px 72px;
+        }
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .brand-logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: block;
+            flex: 0 0 auto;
+        }
+        .brand-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #111827;
+            min-height: 1.4rem;
+            white-space: nowrap;
+        }
+        .typing-caret::after {
+            content: "";
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            margin-left: 3px;
+            background: #2563eb;
+            vertical-align: -0.12em;
+            animation: blink 0.9s steps(1) infinite;
+        }
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        .panel {
+            background: #ffffff;
+            border: 1px solid #dbe3ee;
+            border-radius: 8px;
+            padding: 32px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+        h1, h2 { color: #111827; margin-top: 0; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.1rem; margin-top: 2rem; }
+        p, li { font-size: 0.98rem; }
+        ul { padding-left: 1.25rem; }
+        .eyebrow {
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+        a { color: #2563eb; }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="panel">
+            <div class="brand-row">
+                <img class="brand-logo" src="/static/branding/favicon.png" alt="CSV to Sheets logo">
+                <div
+                    class="brand-name typing-caret"
+                    data-text="CSV to Google Sheets"
+                    aria-label="CSV to Google Sheets"
+                ></div>
+            </div>
+            <p class="eyebrow">Last updated: May 13, 2026</p>
+            <h1>Privacy Policy</h1>
+            <p>
+                CSV to Google Sheets lets a user upload a CSV file and create a Google
+                Spreadsheet from that file. This policy explains what data the app
+                accesses and how that data is used.
+            </p>
+
+            <h2>Information the app accesses</h2>
+            <ul>
+                <li>Google account authorization needed to create and update Google Sheets files.</li>
+                <li>CSV files that the user uploads to the app.</li>
+                <li>Basic technical logs needed to operate and troubleshoot the service.</li>
+            </ul>
+
+            <h2>How the app uses Google user data</h2>
+            <p>
+                The app uses Google Sheets and Google Drive access only to create a
+                spreadsheet requested by the user, write uploaded CSV data into that
+                spreadsheet, and adjust sharing settings when the user requests a public
+                sheet link.
+            </p>
+
+            <h2>How uploaded data is handled</h2>
+            <p>
+                Uploaded CSV files are processed to validate structure, create the target
+                spreadsheet, and upload the data. Temporary processing files and job
+                status files are retained only as long as needed for operation and cleanup.
+            </p>
+
+            <h2>Data sharing</h2>
+            <p>
+                The app does not sell user data. Data is shared only with Google services
+                that are required to create and update the spreadsheet requested by the user.
+            </p>
+
+            <h2>Security</h2>
+            <p>
+                The app uses OAuth credentials and access tokens to communicate with
+                Google APIs. Reasonable steps are taken to limit access to credentials,
+                temporary files, and operational logs.
+            </p>
+
+            <h2>User choices</h2>
+            <p>
+                A user can stop using the app at any time and can revoke the app's access
+                from their Google account permissions page.
+            </p>
+
+            <h2>Contact</h2>
+            <p>
+                For questions about this policy, contact the app owner using the support
+                email listed on the Google OAuth consent screen.
+            </p>
+        </section>
+    </main>
+    <script>
+        const typingTarget = document.querySelector('[data-text]');
+
+        function animateTyping(element, delay = 45) {
+            const text = element.dataset.text || '';
+            element.textContent = '';
+            let index = 0;
+
+            const typeNext = () => {
+                if (index < text.length) {
+                    element.textContent += text[index];
+                    index += 1;
+                    setTimeout(typeNext, delay);
+                } else {
+                    element.classList.remove('typing-caret');
+                }
+            };
+
+            typeNext();
+        }
+
+        if (typingTarget) {
+            animateTyping(typingTarget);
+        }
+    </script>
+</body>
+</html>
